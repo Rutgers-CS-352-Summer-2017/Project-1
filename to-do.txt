@@ -1,0 +1,15 @@
+To do:
+
+1) Modify request parse to include HTTP version DONE
+2) 400 Bad Request response when HTTP version is not formatted correctly DONE
+3) 505 Version not Supported response when HTTP version is < 0 or > 1.0 DONE
+4) 403 Forbidden Response when requested file has no read permissions
+5) Modify File reader to read into byte array
+6) Use '\r' + '\n' to build response
+7) Use read and write to parse inputs and outputs instead of readline and println
+8) Check all HTTP 1.0 commands and include them for 501 Not Implemented response
+9) Modify read to account for additional line of If-Modified-Since, and include 304 Not Modified response
+10) Create function for generating header
+11) Create function for parsing MIME types and returning appropriate type
+12) Create function for correctly processing content-length
+13) Create function for pulling last-modified data and formatting appropriately

@@ -75,9 +75,20 @@ public class PartialHTTP1Server implements Runnable {
 
 		String[] tokens = clientInput.split("\\s+");
 
-		//1. Parse format. Only two tokens, and first token is capitalized? Does the second token begin with /?
-		if(tokens.length != 2 || !tokens[0].toUpperCase().equals(tokens[0]) || tokens[1].charAt(0) != '/')
+		//1. Parse format. Only two tokens, and first token is capitalized? Does the second token begin with /? Does the third token begin with HTTP/?
+		if(tokens.length != 3 || !tokens[0].toUpperCase().equals(tokens[0]) || tokens[1].charAt(0) != '/' || !tokens[2].substring(0,5).equals("HTTP/") || tokens[2].substring(5) == null)
 			return "400 Bad Request";
+
+		float versionNum;
+
+		try {
+			versionNum = Float.parseFloat(tokens[2].substring(5));
+		} catch (NumberFormatException num) {
+			return "400 Bad Request";
+		}
+
+		if (versionNum > 1.0 || versionNum < 0.0)
+			return "505 HTTP Version Not Supported";
 
 		//2. Parse command. Is the first token GET?
 		if(!tokens[0].equals("GET"))
@@ -127,7 +138,7 @@ public class PartialHTTP1Server implements Runnable {
 
 			try {
 				//Set server socket timeout
-				csocket.setSoTimeout(3000);
+				//csocket.setSoTimeout(3000);
 				//Read in message from client
 				String messageFromClient = inFromClient.readLine();
 				System.out.println("Read from client: " + messageFromClient);
