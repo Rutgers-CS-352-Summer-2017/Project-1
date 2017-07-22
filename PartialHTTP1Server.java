@@ -4,7 +4,7 @@ import java.io.*;
 import java.util.concurrent.*;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.util.*;
 
 public class PartialHTTP1Server implements Runnable {
 
@@ -153,7 +153,8 @@ public class PartialHTTP1Server implements Runnable {
 		header += "Content-Type: " + contentType(extension) + '\r' + '\n';
 		header += "Content-Length: " + file.length() + '\r' + '\n';
 
-		SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy kk:mm:ss zzz");
+		SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy kk:mm:ss z");
+		sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
 
 		header += "Last-Modified: " + sdf.format(file.lastModified()) + '\r' + '\n';
 		header += "Content-Encoding: identity" + '\r' + '\n';
@@ -168,6 +169,15 @@ public class PartialHTTP1Server implements Runnable {
 		return header;
 
 
+	}
+
+	private int checkCommand(String command) {
+		if (command.equals("GET") || command.equals("POST") || command.equals("HEAD"))
+			return 0;
+		else if (command.equals("PUT") || command.equals("DELETE") || command.equals("LINK") || command.equals("UNLINK"))
+			return 1;
+		else
+			return 2;
 	}
 
 	private String parseClientInput(String clientInput) {
@@ -189,18 +199,20 @@ public class PartialHTTP1Server implements Runnable {
 		}
 
 		if (versionNum > 1.0 || versionNum < 0.0)
-			return tokens[2] + " 505 HTTP Version Not Supported";
+			return "HTTP/1.0 505 HTTP Version Not Supported";
 
-		//2. Parse command. Is the first token GET?
-		if(!tokens[0].equals("GET"))
-			return tokens[2] + " 501 Not Implemented";
+		//2. Parse command. Is the first token GET, POST or HEAD?
+		if(checkCommand(tokens[0]) == 1)
+			return "HTTP/1.0 501 Not Implemented";
+		else if (checkCommand(tokens[0]) == 2)
+			return "HTTP/1.0 400 Bad Request";
 
 		//3. Parse file. Does the file exist on the server?
 		String filePath = "." + tokens[1];
 
 		File f = new File(filePath);
 		if (!f.isFile())
-			return tokens[2] + "404 Not Found";
+			return "HTTP/1.0 404 Not Found";
 
 		//BufferedReader br = null;
 		//FileReader fr = null;
@@ -215,7 +227,7 @@ public class PartialHTTP1Server implements Runnable {
 
 
 			//String currentLine;
-			String response = tokens[2] + " 200 OK" + '\r' + '\n';
+			String response = "HTTP/1.0 200 OK" + '\r' + '\n';
 
 			response += buildHeader(f, tokens[1]);
 
@@ -224,7 +236,7 @@ public class PartialHTTP1Server implements Runnable {
 			//	response+=currentLine;
 			//}
 
-			response+='\n';
+			response+="\r\n";
 			//br.close();
 			//fr.close();
 
@@ -232,23 +244,26 @@ public class PartialHTTP1Server implements Runnable {
 
 		} catch (IOException e) {
 			//5. Did anything go wrong with the request?
-			return tokens[2] + "403 Forbidden";
+			return "HTTP/1.0 403 Forbidden";
 		}
 
 	}
+
+
 
 	public void run() {
 		try {
 			//Read in input from client, parse input, return proper code
 			BufferedReader inFromClient = new BufferedReader(new InputStreamReader(csocket.getInputStream()));
-			PrintWriter outToClient = new PrintWriter(csocket.getOutputStream(), true);
+			//PrintWriter outToClient = new PrintWriter(csocket.getOutputStream(), true);
+			DataOutputStream outToClient = new DataOutputStream(csocket.getOutputStream());
 			String command = "";
 			String modified = "";
 			int numLines = 0;
 
 			try {
 				//Set server socket timeout
-				//csocket.setSoTimeout(3000);
+				csocket.setSoTimeout(3000);
 				//Read in message from client
 				while (numLines != 2) {
 					if (numLines == 0)
@@ -265,10 +280,18 @@ public class PartialHTTP1Server implements Runnable {
 				String response = parseClientInput(command);
 				System.out.println("Sending response: " + response);
 				//Send response code to client
-				outToClient.println(response);
+				byte[] byteResponse = response.getBytes();
+				outToClient.write(byteResponse);
+				outToClient.flush();
+
+				if(response.contains("200 OK") && (command.contains("GET") || command.contains("POST")))
+					outToClient.write(fileBytes);
+
+
 			} catch (SocketTimeoutException e){
 				//If client does not send data in 3 seconds, send back timeout error
-				outToClient.println("HTTP/1.0 408 Request Timeout");
+				byte[] byteResponse = "HTTP/1.0 408 Request Timeout".getBytes();
+				outToClient.write(byteResponse);
 			}
 			//Close connections
 			inFromClient.close();

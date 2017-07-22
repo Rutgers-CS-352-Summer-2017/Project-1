@@ -3,13 +3,13 @@ To do:
 1) Modify request parse to include HTTP version DONE
 2) 400 Bad Request response when HTTP version is not formatted correctly DONE
 3) 505 Version not Supported response when HTTP version is < 0 or > 1.0 DONE
-4) 403 Forbidden Response when requested file has no read permissions
+4) 403 Forbidden Response when requested file has no read permissions DONE
 5) Modify File reader to read into byte array DONE
 6) Use '\r' + '\n' to build response DONE
 7) Use read and write to parse inputs and outputs instead of readline and println TEMP WORKAROUND
-8) Check all HTTP 1.0 commands and include them for 501 Not Implemented response
-9) Modify read to account for additional line of If-Modified-Since, and include 304 Not Modified response
-10) Create function for generating header
+8) Check all HTTP 1.0 commands and include them for 501 Not Implemented response DONE
+9) Modify read to account for additional line of If-Modified-Since, and include 304 Not Modified response HALF DONE
+10) Create function for generating header DONE
 11) Create function for parsing MIME types and returning appropriate type DONE
 12) Create function for correctly processing content-length DONE
 13) Create function for pulling last-modified data and formatting appropriately DONE
@@ -31,11 +31,11 @@ Step-by-step process:
 
 2. Check HTTP Version. Is it less than or equal to 1.0? If not, 505 Version Not Supported. DONE
 
-3. Check the first token. Is it a recognized command under HTTP 1.0? If not, 400 Bad Request. Is it a recognized command, but it's not GET, POST, or HEAD? 501 Not Implemented.
+3. Check the first token. Is it a recognized command under HTTP 1.0? If not, 400 Bad Request. Is it a recognized command, but it's not GET, POST, or HEAD? 501 Not Implemented. DONE
 
-4. Find the file. Is it there? If not, 404 Not Found.
+4. Find the file. Is it there? If not, 404 Not Found. DONE
 
-5. Try to open file. Can it be opened? If not, 403 Forbidden.
+5. Try to open file. Can it be opened? If not, 403 Forbidden. DONE
 
 6. If If-Modified-Since present, check last modified date. Has it been modified since If-Modified-Since? If not, 304 Not Modified.
 
@@ -44,16 +44,16 @@ Step-by-step process:
 8. Generate header info:
 	(Prelim) Open file, dump whole file into a byte[] array. DONE
 	a) tokens[1] for file info; break off file extension and process, attach to Content-Type. DONE
-	b) Get length of byte array, attach to Content-Length.
-	c) Get last modified date from file.lastModified(), attach to Last-Modified
-	d) Content-Encoding: identity
-	e) Allow: GET, POST, HEAD 
-	f) Expires: 24 hours from current server time
+	b) Get length of byte array, attach to Content-Length. DONE
+	c) Get last modified date from file.lastModified(), attach to Last-Modified DONE
+	d) Content-Encoding: identity DONE
+	e) Allow: GET, POST, HEAD  DONE
+	f) Expires: 24 hours from current server time DONE
 
-9. If command is GET or POST, display 200 OK, followed by header, followed by content. If command is HEAD, don't display content.
+9. If command is GET or POST, display 200 OK, followed by header, followed by content. If command is HEAD, don't display content. DONE
 
-10. If anything goes wrong with the server (nullpointerexceptions, can't open sockets, etc) then 500 Internal Server Error.
+10. If anything goes wrong with the server (nullpointerexceptions, can't open sockets, etc) then 500 Internal Server Error. DONE
 
-11. If max threadpool reached, then 503 Service Unavailable.
+11. If max threadpool reached, then 503 Service Unavailable. DONE
 
-12. If client does not send command in 3 seconds, then 408 Request Timeout.
+12. If client does not send command in 3 seconds, then 408 Request Timeout. DONE
