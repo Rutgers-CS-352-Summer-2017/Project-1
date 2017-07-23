@@ -5,11 +5,14 @@ import java.util.concurrent.*;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.text.ParseException;
 
 public class PartialHTTP1Server implements Runnable {
 
 	private Socket csocket;
 	private byte[] fileBytes;
+	private String command;
+	private String modified;
 
 	PartialHTTP1Server (Socket csocket) {
 		this.csocket = csocket;
@@ -214,6 +217,30 @@ public class PartialHTTP1Server implements Runnable {
 		if (!f.isFile())
 			return "HTTP/1.0 404 Not Found";
 
+		SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy kk:mm:ss z");
+		sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+
+		if (modified.contains("If-Modified-Since")) {
+			String date = modified.substring(modified.indexOf(':') + 2);
+			System.out.println("\n\nModified Since String: " + date + "\n\n");
+			String fileDate = sdf.format(f.lastModified());
+			try {
+				Date fileModifiedDate = sdf.parse(fileDate);
+				//System.out.println ("\n\nFile Modified Date: " + fileModifiedDate + "\n\n");
+				Date ifModifiedSinceDate = sdf.parse(date);
+				//System.out.println ("\n\nModified Since Date: " + ifModifiedSinceDate + "\n\n");
+				if (ifModifiedSinceDate.after(fileModifiedDate)) {
+					Calendar now = Calendar.getInstance();
+					now.add(Calendar.HOUR, 24);
+					return "HTTP/1.0 304 Not Modified" + '\r' + '\n' + "Expires: " + sdf.format(now.getTime()) + '\r' + '\n' ;
+				}
+			} catch (ParseException e) {
+				System.out.println("Error parsing date");
+			}
+
+		}
+
+
 		//BufferedReader br = null;
 		//FileReader fr = null;
 		Path path = Paths.get(filePath);
@@ -257,8 +284,8 @@ public class PartialHTTP1Server implements Runnable {
 			BufferedReader inFromClient = new BufferedReader(new InputStreamReader(csocket.getInputStream()));
 			//PrintWriter outToClient = new PrintWriter(csocket.getOutputStream(), true);
 			DataOutputStream outToClient = new DataOutputStream(csocket.getOutputStream());
-			String command = "";
-			String modified = "";
+			command = "";
+			modified = "";
 			int numLines = 0;
 
 			try {
