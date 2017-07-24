@@ -76,6 +76,7 @@ public class PartialHTTP1Server implements Runnable {
 		}
 	}
 
+	//Check extension for content-type
 	private String contentType(String extension) {
 
 		String contentType = "";
@@ -146,6 +147,7 @@ public class PartialHTTP1Server implements Runnable {
 
 	}
 
+	//Generate header based on filename and file
 	private String buildHeader (File file, String fileName) {
 		String header = "";
 
@@ -174,6 +176,7 @@ public class PartialHTTP1Server implements Runnable {
 
 	}
 
+	//Check the command to determine if it's 400 BAD Request, 200 OK, or 501 Not Implemented
 	private int checkCommand(String command) {
 		if (command.equals("GET") || command.equals("POST") || command.equals("HEAD"))
 			return 0;
@@ -195,12 +198,14 @@ public class PartialHTTP1Server implements Runnable {
 		if(tokens.length != 3 || !tokens[0].toUpperCase().equals(tokens[0]) || tokens[1].charAt(0) != '/' || !tokens[2].substring(0,5).equals("HTTP/") || tokens[2].substring(5) == null)
 			return "HTTP/1.0 400 Bad Request";
 
+		//Try to grab version number and see if it's valid
 		try {
 			versionNum = Float.parseFloat(tokens[2].substring(5));
 		} catch (NumberFormatException num) {
 			return "HTTP/1.0 400 Bad Request";
 		}
 
+		//See if version number is supported
 		if (versionNum > 1.0 || versionNum < 0.0)
 			return "HTTP/1.0 505 HTTP Version Not Supported";
 
@@ -220,15 +225,14 @@ public class PartialHTTP1Server implements Runnable {
 		SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy kk:mm:ss z");
 		sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
 
+		//If If-Modified-Since header exists, see if file has been modified since the requested date
 		if (modified.contains("If-Modified-Since")) {
 			String date = modified.substring(modified.indexOf(':') + 2);
 			System.out.println("\n\nModified Since String: " + date + "\n\n");
 			String fileDate = sdf.format(f.lastModified());
 			try {
 				Date fileModifiedDate = sdf.parse(fileDate);
-				//System.out.println ("\n\nFile Modified Date: " + fileModifiedDate + "\n\n");
 				Date ifModifiedSinceDate = sdf.parse(date);
-				//System.out.println ("\n\nModified Since Date: " + ifModifiedSinceDate + "\n\n");
 				if (ifModifiedSinceDate.after(fileModifiedDate)) {
 					Calendar now = Calendar.getInstance();
 					now.add(Calendar.HOUR, 24);
@@ -240,38 +244,30 @@ public class PartialHTTP1Server implements Runnable {
 
 		}
 
-
-		//BufferedReader br = null;
-		//FileReader fr = null;
 		Path path = Paths.get(filePath);
 
 		//4. Otherwise, try to open the file and send response.
 		try {
 
-			//fr = new FileReader(filePath);
-			//br = new BufferedReader(fr);
 			fileBytes = Files.readAllBytes(path);
 
 
-			//String currentLine;
 			String response = "HTTP/1.0 200 OK" + '\r' + '\n';
 
+			//Attach header to the 200 OK Request
 			response += buildHeader(f, tokens[1]);
 
 
-			//while ((currentLine = br.readLine()) != null) {
-			//	response+=currentLine;
-			//}
-
 			response+="\r\n";
-			//br.close();
-			//fr.close();
 
 			return response;
 
-		} catch (IOException e) {
-			//5. Did anything go wrong with the request?
+		} catch (AccessDeniedException e) {
+			//5. Did the user not have read permissions on the file?
 			return "HTTP/1.0 403 Forbidden";
+		} catch (IOException io) {
+			//6. Did anything go wrong with the request?
+			return "HTTP/1.0 500 Internal Server Error";
 		}
 
 	}
@@ -282,7 +278,6 @@ public class PartialHTTP1Server implements Runnable {
 		try {
 			//Read in input from client, parse input, return proper code
 			BufferedReader inFromClient = new BufferedReader(new InputStreamReader(csocket.getInputStream()));
-			//PrintWriter outToClient = new PrintWriter(csocket.getOutputStream(), true);
 			DataOutputStream outToClient = new DataOutputStream(csocket.getOutputStream());
 			command = "";
 			modified = "";
@@ -299,8 +294,6 @@ public class PartialHTTP1Server implements Runnable {
 						modified = inFromClient.readLine();
 					numLines++;
 				}
-				//String messageFromClient = inFromClient.readLine();
-				//System.out.println("Read from client: " + messageFromClient);
 				System.out.println("Command: " + command + "; Modified: " + modified);
 				System.out.println("Num Lines: " + numLines);
 				//Parse input from client
@@ -311,6 +304,7 @@ public class PartialHTTP1Server implements Runnable {
 				outToClient.write(byteResponse);
 				outToClient.flush();
 
+				//If 200 OK and a GET or POST request, send the payload
 				if(response.contains("200 OK") && (command.contains("GET") || command.contains("POST")))
 					outToClient.write(fileBytes);
 
