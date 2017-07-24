@@ -225,8 +225,8 @@ public class PartialHTTP1Server implements Runnable {
 		SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy kk:mm:ss z");
 		sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-		//If If-Modified-Since header exists, see if file has been modified since the requested date
-		if (modified.contains("If-Modified-Since")) {
+		//If If-Modified-Since header exists on a GET request, see if file has been modified since the requested date
+		if (modified.contains("If-Modified-Since") && tokens[0].equals("GET")) {
 			String date = modified.substring(modified.indexOf(':') + 2);
 			System.out.println("\n\nModified Since String: " + date + "\n\n");
 			String fileDate = sdf.format(f.lastModified());
